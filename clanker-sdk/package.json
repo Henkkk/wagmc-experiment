@@ -1,0 +1,51 @@
+{
+  "name": "clanker-sdk",
+  "version": "4.0.21",
+  "description": "SDK for deploying tokens on Base using Clanker",
+  "type": "module",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./cli": "./dist/cli/cli.js"
+  },
+  "bin": {
+    "clanker-sdk": "./dist/cli/cli.js"
+  },
+  "files": ["dist", ".env.example", "README.md"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/clanker-devco/clanker-sdk.git"
+  },
+  "homepage": "https://github.com/clanker-devco/clanker-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/clanker-devco/clanker-sdk/issues"
+  },
+  "scripts": {
+    "lint": "biome check && tsc --noEmit",
+    "format": "biome check --write --unsafe",
+    "create-clanker": "bun src/cli/create-clanker",
+    "publish-package": "bun tsup && bun publish"
+  },
+  "keywords": ["clanker", "token", "deployment", "ethereum", "superchain"],
+  "author": "Clanker Team",
+  "license": "MIT",
+  "dependencies": {
+    "@openzeppelin/merkle-tree": "^1.0.8",
+    "abitype": "^1.0.8",
+    "dotenv": "^16.4.7",
+    "inquirer": "^8.2.6",
+    "viem": "^2.7.9",
+    "zod": "^3.24.4"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.0.0",
+    "@types/bun": "latest",
+    "@types/inquirer": "^8.2.6",
+    "@types/node": "^22.14.0",
+    "tsup": "^8.4.0",
+    "typescript": "^5.3.3"
+  },
+  "peerDependencies": {
+    "viem": "^2.7.9"
+  }
+}

@@ -1,0 +1,42 @@
+# Environment variables
+.env
+.env.local
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Coverage reports
+coverage/
+
+# IDE files
+.idea/
+*.sublime-*
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Video and script files
+video_script.txt
+video_commands.txt
+*.mp4
+*.mov
+*.avi
+standup.txt
+
+# GitBook documentation
+gitbookDocs.md
+
+# Development files
+examples/updated-sdk.ts
+llm.txt
+
+#package lock
+package-lock.json
