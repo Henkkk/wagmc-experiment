@@ -3,7 +3,9 @@
     "allow": [
       "Bash(bun run:*)",
       "Bash(bun deploy-sepolia.ts:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(bun:*)"
     ],
     "deny": []
   }

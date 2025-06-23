@@ -1,4 +1,5 @@
 import type { Account, PublicClient, WalletClient } from 'viem';
+import { ClankerAirdrop_abi } from './abi/v4/ClankerAirdrop.js';
 import { deployTokenV3 } from './deployment/v3.js';
 import { deployTokenV4, simulateDeploy, withVanityAddress } from './deployment/v4.js';
 import { availableFees } from './fees/availableFees.js';
@@ -6,6 +7,7 @@ import { claimRewards } from './fees/claim.js';
 import type { TokenConfig, TokenConfigV4 } from './types/index.js';
 import type { BuildV4Result } from './types/v4.js';
 import type { ClankerError } from './utils/errors.js';
+import { getMerkleProof, type AirdropEntry } from './utils/merkleTree.js';
 
 type ClankerConfig = {
   wallet?: WalletClient;
@@ -110,6 +112,115 @@ export class Clanker {
       default:
         throw new Error('Invalid config type');
     }
+  }
+
+  /**
+   * Claims airdrop tokens for a recipient
+   * @param tokenAddress - The address of the token with the airdrop
+   * @param airdropContractAddress - The address of the airdrop contract
+   * @param airdropEntries - The original airdrop entries used to create the merkle tree
+   * @param recipientAddress - Optional recipient address (defaults to wallet address)
+   * @returns Promise resolving to the transaction hash
+   * @throws {Error} If wallet client or public client is not configured
+   */
+  async claimAirdrop(
+    tokenAddress: `0x${string}`,
+    airdropContractAddress: `0x${string}`,
+    airdropEntries: AirdropEntry[],
+    recipientAddress?: `0x${string}`
+  ): Promise<`0x${string}`> {
+    if (!this.wallet) throw new Error('Wallet client required for claiming');
+    if (!this.publicClient) throw new Error('Public client required for claiming');
+
+    const recipient = recipientAddress || this.wallet.account?.address;
+    if (!recipient) throw new Error('Recipient address required');
+
+    // Find the entry for the recipient
+    const userEntry = airdropEntries.find(entry => 
+      entry.account.toLowerCase() === recipient.toLowerCase()
+    );
+
+    if (!userEntry) {
+      throw new Error(`No airdrop allocation found for address: ${recipient}`);
+    }
+
+    // Generate merkle proof
+    const { createMerkleTree } = await import('./utils/merkleTree.js');
+    const { tree, entries } = createMerkleTree(airdropEntries);
+    const proof = getMerkleProof(tree, entries, recipient, userEntry.amount);
+
+    // Check available amount before claiming
+    const availableAmount = await this.publicClient.readContract({
+      address: airdropContractAddress,
+      abi: ClankerAirdrop_abi,
+      functionName: 'amountAvailableToClaim',
+      args: [tokenAddress, recipient, BigInt(userEntry.amount) * 10n ** 18n],
+    });
+
+    if (availableAmount === 0n) {
+      throw new Error('No tokens available to claim (may be in lockup/vesting period or already claimed)');
+    }
+
+    // Claim the tokens
+    const txHash = await this.wallet.writeContract({
+      address: airdropContractAddress,
+      abi: ClankerAirdrop_abi,
+      functionName: 'claim',
+      args: [
+        tokenAddress,
+        recipient,
+        BigInt(userEntry.amount) * 10n ** 18n,
+        proof,
+      ],
+    });
+
+    return txHash;
+  }
+
+  /**
+   * Checks airdrop status for a recipient
+   * @param tokenAddress - The address of the token with the airdrop
+   * @param airdropContractAddress - The address of the airdrop contract
+   * @param recipientAddress - The recipient address to check
+   * @param allocatedAmount - The allocated amount for the recipient (in tokens, not wei)
+   * @returns Promise resolving to airdrop status information
+   * @throws {Error} If public client is not configured
+   */
+  async checkAirdropStatus(
+    tokenAddress: `0x${string}`,
+    airdropContractAddress: `0x${string}`,
+    recipientAddress: `0x${string}`,
+    allocatedAmount: number
+  ) {
+    if (!this.publicClient) throw new Error('Public client required for checking status');
+
+    const allocatedAmountWei = BigInt(allocatedAmount) * 10n ** 18n;
+
+    const [availableAmount, airdropInfo] = await Promise.all([
+      this.publicClient.readContract({
+        address: airdropContractAddress,
+        abi: ClankerAirdrop_abi,
+        functionName: 'amountAvailableToClaim',
+        args: [tokenAddress, recipientAddress, allocatedAmountWei],
+      }),
+      this.publicClient.readContract({
+        address: airdropContractAddress,
+        abi: ClankerAirdrop_abi,
+        functionName: 'airdrops',
+        args: [tokenAddress],
+      }),
+    ]);
+
+    return {
+      recipient: recipientAddress,
+      allocatedAmount: allocatedAmount,
+      availableAmount: Number(availableAmount) / 1e18,
+      lockupEndTime: new Date(Number(airdropInfo[3]) * 1000),
+      vestingEndTime: new Date(Number(airdropInfo[4]) * 1000),
+      totalSupply: Number(airdropInfo[1]) / 1e18,
+      totalClaimed: Number(airdropInfo[2]) / 1e18,
+      merkleRoot: airdropInfo[0],
+    };
   }
 }
 

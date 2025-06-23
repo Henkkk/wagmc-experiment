@@ -5,6 +5,7 @@ import { baseSepolia } from 'viem/chains';
 import { TokenConfigV4Builder } from './src/config/builders.js';
 import { FEE_CONFIGS, FeeConfigs, POOL_POSITIONS } from './src/constants.js';
 import { Clanker } from './src/index.js';
+import { createMerkleTree, type AirdropEntry } from './src/utils/merkleTree.js';
 
 // Load environment variables
 dotenv.config();
@@ -25,7 +26,8 @@ if (!PRIVATE_KEY) {
  * - V4 token deployment on Base Sepolia with advanced features
  * - Builder pattern for token configuration
  * - Pool configuration with dynamic fees
- * - Vault extension with lockup and vesting
+ * - Airdrop extension for direct token allocation (30% to specific wallet)
+ * - Single-recipient airdrop with immediate availability (no lockup/vesting)
  * - Environment variable setup for private key
  */
 async function main(): Promise<void> {
@@ -58,45 +60,65 @@ async function main(): Promise<void> {
 
     console.log('\n🚀 Deploying V4 Token on Base Sepolia Testnet\n');
 
+    // Define the recipient wallet address for 30% token allocation
+    const recipientWallet = '0xc1C7C9C7A22885e323250e198c5f7374c0C9c5D5'; // Replace with your desired wallet
+    console.log('💰 30% of tokens will be sent to:', recipientWallet);
+
+    // Calculate total token allocation (30% = 30,000 tokens out of 100,000 total supply)
+    const totalSupply = 100_000_000_000; // 100 billion tokens (standard Clanker supply)
+    const allocationAmount = totalSupply * 0.30; // 30% allocation
+
+    // Create airdrop entry for single recipient
+    const airdropEntries: AirdropEntry[] = [
+      { account: recipientWallet, amount: allocationAmount }
+    ];
+
+    // Create merkle tree for airdrop
+    const { root: merkleRoot } = createMerkleTree(airdropEntries);
+    console.log('📊 Airdrop merkle root:', merkleRoot);
+    console.log('💰 Allocated amount:', allocationAmount.toLocaleString(), 'tokens');
+
     // Build token configuration using the V4 builder pattern
     const tokenConfig = new TokenConfigV4Builder()
-      .withName('Test Token V4')
-      .withSymbol('TEST4')
-      .withImage('ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi')
+      .withName('Test Token V4 Direct Allocation 4')
+      .withSymbol('TEST4-AIRDROP 12345')
+      //.withImage('ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi')
       .withTokenAdmin(account.address)
-      .withMetadata({
-        description: 'V4 test token deployed on Base Sepolia using Clanker SDK',
-        socialMediaUrls: [],
-        auditUrls: [],
-      })
-      .withContext({
-        interface: 'Clanker SDK',
-        platform: 'Test Deployment',
-        messageId: 'sepolia-test-v4',
-        id: 'TEST4-1',
-      })
-      .withVault({
-        percentage: 5, // 5% of token supply (minimal for testing)
-        lockupDuration: 604800, // 7 days in seconds (short for testing)
-        vestingDuration: 604800, // 7 days in seconds (short for testing)
-      })
-      .withDevBuy({
-        ethAmount: 0, // No initial buy for testing
-      })
-      .withRewardsRecipients({
-        recipients: [
-          {
-            recipient: account.address,
-            admin: account.address,
-            bps: 5000, // 50% creator reward
-          },
-          {
-            recipient: '0x1eaf444ebDf6495C57aD52A04C61521bBf564ace',
-            admin: '0x1eaf444ebDf6495C57aD52A04C61521bBf564ace',
-            bps: 5000, // 50% interface reward
-          },
-        ],
-      })
+      // .withMetadata({
+      //   description: '',
+      //   socialMediaUrls: [],
+      //   auditUrls: [],
+      // })
+      // .withContext({
+      //   interface: '',
+      //   platform: '',
+      //   messageId: '',
+      //   id: '',
+      // })
+      .withAirdrop({
+         merkleRoot,
+         lockupDuration: 86400, // 1 day minimum required by contract (86400 seconds)
+         vestingDuration: 0, // 0 = immediate vesting after lockup 
+         entries: airdropEntries,
+         percentage: 30, // 30% of token supply for direct allocation
+       })
+      // .withDevBuy({
+      //   ethAmount: 0, // No initial buy for testing
+      // })
+      // .withRewardsRecipients({
+      //   recipients: [
+      //     {
+      //       recipient: account.address,
+      //       admin: account.address,
+      //       bps: 5000, // 50% creator reward
+      //     },
+      //     {
+      //       recipient: '0x1eaf444ebDf6495C57aD52A04C61521bBf564ace',
+      //       admin: '0x1eaf444ebDf6495C57aD52A04C61521bBf564ace',
+      //       bps: 5000, // 50% interface reward
+      //     },
+      //   ],
+      // })
       .withPoolConfig({
         pairedToken: '0x4200000000000000000000000000000000000006', // WETH on Base Sepolia
         startingMarketCapInPairedToken: 10, // 10 ETH initial market cap (aligns with Standard positions)
@@ -115,6 +137,15 @@ async function main(): Promise<void> {
       `https://sepolia.basescan.org/token/${tokenAddress}`
     );
     console.log('🌐 Network: Base Sepolia (Testnet)');
+    console.log('🎁 Direct allocation configured for:', recipientWallet);
+    console.log('💰 Allocation amount:', allocationAmount.toLocaleString(), 'tokens (30% of supply)');
+    console.log('🔒 Lockup period: 1 day (required minimum)');
+    console.log('⚡ After lockup: Tokens are immediately claimable (no vesting)');
+    console.log('\n📝 To claim tokens, the recipient can:');
+    console.log('   1. Use the claim-airdrop.ts script');
+    console.log('   2. Generate proof with: bun generate-airdrop-proofs.ts', recipientWallet, allocationAmount.toString());
+    console.log('   3. Or use the Clanker SDK claimAirdrop() method');
+    console.log('\n⏰ Important: Tokens can only be claimed after the 1-day lockup period expires!');
   } catch (error) {
     if (error instanceof Error) {
       console.error('❌ Deployment failed:', error.message);
