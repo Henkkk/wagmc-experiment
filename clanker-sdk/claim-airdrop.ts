@@ -51,13 +51,16 @@ async function main(): Promise<void> {
     console.log('\n🎁 Claiming Airdrop Tokens\n');
 
     // Replace these with your actual deployment values
-    const TOKEN_ADDRESS = '0x...'; // Replace with your deployed token address
-    const AIRDROP_CONTRACT_ADDRESS = '0x...'; // Replace with the airdrop contract address
+    const TOKEN_ADDRESS = '0xfA6CD9ED389bbA42191E64fCBE01eC804DC16d44'; // Replace with your deployed token address
+    const AIRDROP_CONTRACT_ADDRESS = '0x29d17C1A8D851d7d4cA97FAe97AcAdb398D9cCE0'; // Replace with the airdrop contract address
 
     // Recreate the same airdrop entries used during deployment
     // This MUST match exactly what was used during deployment
+    const totalSupply = 100_000_000_000; // 100 billion tokens (standard Clanker supply)
+    const allocationAmount = totalSupply * 0.30; // 30% allocation = 30 billion tokens
+    
     const airdropEntries: AirdropEntry[] = [
-      { account: account.address, amount: 1000 }, // 1000 tokens to deployer
+      { account: account.address, amount: allocationAmount }, // 30 billion tokens to deployer (30% of supply)
     ];
 
     // Recreate the merkle tree (must be identical to deployment)

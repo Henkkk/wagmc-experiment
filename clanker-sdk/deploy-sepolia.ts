@@ -80,8 +80,8 @@ async function main(): Promise<void> {
 
     // Build token configuration using the V4 builder pattern
     const tokenConfig = new TokenConfigV4Builder()
-      .withName('Test Token V4 Direct Allocation 4')
-      .withSymbol('TEST4-AIRDROP 12345')
+      .withName('Fartcoin')
+      .withSymbol('FART')
       //.withImage('ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi')
       .withTokenAdmin(account.address)
       // .withMetadata({
