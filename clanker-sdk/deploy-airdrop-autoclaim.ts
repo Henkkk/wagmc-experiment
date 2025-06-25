@@ -90,8 +90,8 @@ async function main(): Promise<void> {
 
     // Build token configuration with airdrop extension
     const tokenConfig = new TokenConfigV4Builder()
-      .withName('Farcaster Cast Token')
-      .withSymbol('FCT')
+      .withName('Farcaster Cast Token 2')
+      .withSymbol('FCT2')
       .withTokenAdmin(account.address)
       .withMetadata({
         description: 'Token launched based on a Farcaster cast with 30% allocation to cast author',

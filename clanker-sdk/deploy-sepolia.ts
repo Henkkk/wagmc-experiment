@@ -79,8 +79,9 @@ async function main(): Promise<void> {
     console.log('💰 Allocated amount:', allocationAmount.toLocaleString(), 'tokens');
 
     // Build token configuration using the V4 builder pattern
+    const timestamp = Date.now();
     const tokenConfig = new TokenConfigV4Builder()
-      .withName('Fartcoin')
+      .withName(`Fartcoin ${timestamp}`)
       .withSymbol('FART')
       //.withImage('ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi')
       .withTokenAdmin(account.address)
